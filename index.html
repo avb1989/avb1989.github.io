@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment-with-locales.min.js" integrity="sha512-42PE0rd+wZ2hNXftlM78BSehIGzezNeQuzihiBCvUEB3CVxHvsShF86wBWwQORNxNINlBPuq7rG4WWhNiTVHFg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <title>Itinerary Location Tracker</title>
+</head>
+<body>
+  <h1>Itinerary Location Tracker</h1>
+
+  <script>
+    // Function to extract the URL parameter by name
+    function getURLParameter(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    // Function to determine and display the current location from the itinerary
+    function showCurrentLocation(itinerary) {
+      const now = new Date();
+      const currentTimestamp = now.toISOString();
+      const sortedItinerary = itinerary.sort((a, b) => (a.start > b.start) ? 1 : -1);
+
+      let currentLocation = null;
+      let previousLocation = null;
+
+      for (let i = 0; i < sortedItinerary.length; i++) {
+        const location = sortedItinerary[i];
+        if (location.start < currentTimestamp && location.end > currentTimestamp) {
+          currentLocation = location;
+          break;
+        } else if (previousLocation && previousLocation.end < currentTimestamp && location.start > currentTimestamp) {
+          currentLocation = previousLocation;
+          break;
+        }
+        previousLocation = location;
+      }
+
+      if (currentLocation) {
+        if (currentLocation !== previousLocation) {
+          // Traveling between locations
+          const timeFormat = "DD MMM hh:mm A"
+          const start = moment(new Date(currentLocation.start)).format(timeFormat);
+          const end = moment(new Date(currentLocation.end)).format(timeFormat);
+          document.body.innerHTML += `<p><strong>Status: Traveling</strong> (Start: ${start}, End: ${end})</p>
+          <p><strong>Source:</strong> ${currentLocation.source}</p>
+          <p><strong>Destination:</strong> ${currentLocation.destination}</p>`;
+        } else {
+          // Located in a destination
+          document.body.innerHTML += `<p><strong>Status: Located in ${currentLocation.destination}</strong></p>`;
+        }
+
+        // Display the current location details
+        document.body.innerHTML += `
+          <h2>Current Location Details:</h2>
+          <p><strong>Source:</strong> ${currentLocation.source}</p>
+          <p><strong>Destination:</strong> ${currentLocation.destination}</p>
+          <p><strong>Contact/Hotel:</strong> ${currentLocation.contact_or_hotel}</p>
+          <p><strong>Address:</strong> ${currentLocation.address}</p>
+          <p><strong>Phone Number:</strong> <a href="tel:${currentLocation['phone number']}">${currentLocation['phone number']}</a></p>
+          <p><strong>Other Info:</strong> ${currentLocation.other_info}</p>
+          <div>${currentLocation.maps_link}</div>
+        `;
+      } else {
+        document.body.innerHTML += "<p>No current location found in the itinerary.</p>";
+      }
+    }
+
+    // Get the itinerary from the URL parameter and parse it as JSON
+    const itineraryParam = getURLParameter('itinerary');
+    if (itineraryParam) {
+      try {
+        const itinerary = JSON.parse(decodeURIComponent(itineraryParam));
+        showCurrentLocation(itinerary);
+      } catch (error) {
+        document.body.innerHTML += "<p>Error parsing the itinerary JSON.</p>";
+      }
+    } else {
+      document.body.innerHTML += "<p>No itinerary data provided.</p>";
+    }
+  </script>
+</body>
+</html>
